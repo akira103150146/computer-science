@@ -1,0 +1,420 @@
+/* ==========================================================================
+   CS 自學聖經 — 導覽引擎 / Navigation engine
+   - 單一資料來源:章節清單 BOOK
+   - 自動產生左側導覽、頁內目錄、上一章/下一章、進度條
+   - 主題切換、程式碼複製、MathJax / highlight.js 載入
+   ========================================================================== */
+
+const BOOK = {
+  title: "CS 自學聖經",
+  parts: [
+    {
+      part: "序章 · Preface",
+      icon: "✦",
+      blurb: "為什麼學、怎麼學、如何使用這本書。",
+      chapters: [
+        { id: "00-about", num: "0", title: "如何使用本書與學習路線圖", en: "How to Use This Book", done: true },
+      ],
+    },
+    {
+      part: "第一部 · 計算機科學入門",
+      icon: "🌱",
+      blurb: "從零開始:計算是什麼?用 Python 寫出第一支程式。",
+      chapters: [
+        { id: "01-what-is-cs", num: "1", title: "什麼是計算、程式與演算法", en: "Computation, Programs & Algorithms", done: true },
+        { id: "02-python-basics", num: "2", title: "Python 基礎與命令式程式設計", en: "Python & Imperative Programming", done: true },
+        { id: "03-functions-recursion", num: "3", title: "函式、抽象與遞迴", en: "Functions, Abstraction & Recursion", done: true },
+        { id: "04-data-structures-intro", num: "4", title: "基本資料結構與字串", en: "Built-in Data Structures", done: true },
+        { id: "05-algorithmic-thinking", num: "5", title: "演算法思維、除錯與測試", en: "Algorithmic Thinking, Debugging & Testing", done: true },
+      ],
+    },
+    {
+      part: "第二部 · 程式設計核心",
+      icon: "🧩",
+      blurb: "函數式、系統化設計、物件導向、型別系統、設計模式與架構。",
+      chapters: [
+        { id: "06-functional-programming", num: "6", title: "函數式程式設計", en: "Functional Programming", done: true },
+        { id: "07-design-recipe", num: "7", title: "系統化程式設計法", en: "Systematic Program Design", done: true },
+        { id: "08-oop", num: "8", title: "物件導向設計", en: "Object-Oriented Design", done: true },
+        { id: "09-types", num: "9", title: "靜態與動態型別系統", en: "Static & Dynamic Typing", done: true },
+        { id: "10-design-patterns", num: "10", title: "設計模式與重構", en: "Design Patterns & Refactoring", done: true },
+        { id: "11-software-architecture", num: "11", title: "軟體架構", en: "Software Architecture", done: true },
+      ],
+    },
+    {
+      part: "第三部 · 計算數學",
+      icon: "📐",
+      blurb: "微積分、離散數學、計數與機率、數論與圖論基礎。",
+      chapters: [
+        { id: "12-calculus", num: "12", title: "微積分精要", en: "Calculus for CS", done: true },
+        { id: "13-discrete-math", num: "13", title: "離散數學:邏輯、證明與集合", en: "Discrete Math: Logic & Proofs", done: true },
+        { id: "14-combinatorics-probability", num: "14", title: "計數、組合與離散機率", en: "Counting & Discrete Probability", done: true },
+        { id: "15-number-theory-graphs", num: "15", title: "數論、圖論與遞迴關係", en: "Number Theory & Graph Theory", done: true },
+      ],
+    },
+    {
+      part: "第四部 · CS 工具",
+      icon: "🛠️",
+      blurb: "終端機、Shell、Vim、Git——專業開發者的日常兵器。",
+      chapters: [
+        { id: "16-shell", num: "16", title: "終端機與 Shell 指令稿", en: "Shell & Scripting", done: true },
+        { id: "17-editors", num: "17", title: "Vim 與編輯器", en: "Vim & Editors", done: true },
+        { id: "18-git", num: "18", title: "版本控制 Git", en: "Version Control with Git", done: true },
+      ],
+    },
+    {
+      part: "第五部 · 計算機系統",
+      icon: "⚙️",
+      blurb: "從一顆 NAND 閘到作業系統與網路:打造一台完整的電腦。",
+      chapters: [
+        { id: "19-boolean-logic", num: "19", title: "布林代數與邏輯閘", en: "Boolean Logic & Gates", done: true },
+        { id: "20-combinational-sequential", num: "20", title: "組合邏輯、ALU 與記憶體", en: "ALU, Memory & Sequential Logic", done: true },
+        { id: "21-cpu-machine-language", num: "21", title: "機器語言與 CPU 架構", en: "Machine Language & CPU", done: true },
+        { id: "22-assembler", num: "22", title: "組譯器", en: "Assembler", done: true },
+        { id: "23-vm-compiler", num: "23", title: "虛擬機與編譯器", en: "VM & Compiler", done: true },
+        { id: "24-operating-system", num: "24", title: "作業系統:虛擬化、並行與持久化", en: "Operating Systems (OSTEP)", done: true },
+        { id: "25-networking", num: "25", title: "計算機網路", en: "Computer Networking", done: true },
+      ],
+    },
+    {
+      part: "第六部 · 演算法與資料結構",
+      icon: "🧠",
+      blurb: "分治、排序、圖、貪婪、動態規劃,直到 NP 完備性。",
+      chapters: [
+        { id: "26-complexity", num: "26", title: "漸進複雜度與分析", en: "Asymptotic Analysis", done: true },
+        { id: "27-divide-and-conquer", num: "27", title: "分治法與遞迴關係", en: "Divide & Conquer", done: true },
+        { id: "28-sorting-searching", num: "28", title: "排序與搜尋", en: "Sorting & Searching", done: true },
+        { id: "29-data-structures", num: "29", title: "進階資料結構", en: "Data Structures", done: true },
+        { id: "30-graph-algorithms", num: "30", title: "圖演算法", en: "Graph Algorithms", done: true },
+        { id: "31-greedy", num: "31", title: "貪婪演算法與最小生成樹", en: "Greedy Algorithms & MST", done: true },
+        { id: "32-dynamic-programming", num: "32", title: "動態規劃", en: "Dynamic Programming", done: true },
+        { id: "33-np-completeness", num: "33", title: "NP 完備性與計算難解", en: "NP-Completeness", done: true },
+      ],
+    },
+    {
+      part: "第七部 · 資訊安全",
+      icon: "🔐",
+      blurb: "CIA 三要素、密碼學、威脅模型與防禦性程式設計。",
+      chapters: [
+        { id: "34-security-fundamentals", num: "34", title: "資安基礎與威脅模型", en: "Security Fundamentals", done: true },
+        { id: "35-cryptography", num: "35", title: "密碼學", en: "Cryptography", done: true },
+        { id: "36-secure-coding", num: "36", title: "防禦性程式設計與漏洞辨識", en: "Secure Coding", done: true },
+      ],
+    },
+    {
+      part: "第八部 · 應用",
+      icon: "🚀",
+      blurb: "資料庫、機器學習、計算機圖學、軟體工程。",
+      chapters: [
+        { id: "37-databases", num: "37", title: "資料庫系統", en: "Databases", done: true },
+        { id: "38-machine-learning", num: "38", title: "機器學習", en: "Machine Learning", done: true },
+        { id: "39-computer-graphics", num: "39", title: "計算機圖學", en: "Computer Graphics", done: true },
+        { id: "40-software-engineering", num: "40", title: "軟體工程", en: "Software Engineering", done: true },
+      ],
+    },
+    {
+      part: "第九部 · 倫理",
+      icon: "⚖️",
+      blurb: "技術的社會脈絡、專業倫理、智財與隱私。",
+      chapters: [
+        { id: "41-ethics", num: "41", title: "計算倫理、智財與隱私", en: "Ethics, IP & Privacy", done: true },
+      ],
+    },
+    {
+      part: "第十部 · 進階程式設計",
+      icon: "🔬",
+      blurb: "編譯器、平行運算、Haskell、Prolog、除錯與測試理論。",
+      chapters: [
+        { id: "42-compilers", num: "42", title: "編譯器原理", en: "Compilers", done: true },
+        { id: "43-parallel", num: "43", title: "平行程式設計", en: "Parallel Programming", done: true },
+        { id: "44-haskell", num: "44", title: "Haskell 與純函數式", en: "Haskell", done: true },
+        { id: "45-prolog", num: "45", title: "邏輯程式設計 Prolog", en: "Logic Programming", done: true },
+        { id: "46-debugging-testing", num: "46", title: "軟體除錯與測試理論", en: "Debugging & Testing Theory", done: true },
+      ],
+    },
+    {
+      part: "第十一部 · 進階系統",
+      icon: "🏗️",
+      blurb: "數位電路、CMOS、有限狀態機、快取、管線與虛擬記憶體。",
+      chapters: [
+        { id: "47-digital-circuits", num: "47", title: "數位電路與有限狀態機", en: "Digital Circuits & FSM", done: true },
+        { id: "48-computer-architecture", num: "48", title: "計算機結構:快取與管線", en: "Computer Architecture", done: true },
+      ],
+    },
+    {
+      part: "第十二部 · 進階理論",
+      icon: "🎓",
+      blurb: "自動機、Turing 機、可計算性、計算幾何與賽局理論。",
+      chapters: [
+        { id: "49-theory-of-computation", num: "49", title: "計算理論", en: "Theory of Computation", done: true },
+        { id: "50-computational-geometry", num: "50", title: "計算幾何", en: "Computational Geometry", done: true },
+        { id: "51-game-theory", num: "51", title: "演算法賽局理論", en: "Algorithmic Game Theory", done: true },
+      ],
+    },
+    {
+      part: "第十三部 · 進階資安",
+      icon: "🛡️",
+      blurb: "Web 安全、數位鑑識、治理合規與安全開發生命週期。",
+      chapters: [
+        { id: "52-web-security", num: "52", title: "Web 安全", en: "Web Security", done: true },
+        { id: "53-forensics-governance", num: "53", title: "數位鑑識與安全開發", en: "Forensics & Secure SDLC", done: true },
+      ],
+    },
+    {
+      part: "第十四部 · 進階數學",
+      icon: "∑",
+      blurb: "線性代數、數值方法、形式邏輯與機率論。",
+      chapters: [
+        { id: "54-linear-algebra", num: "54", title: "線性代數", en: "Linear Algebra", done: true },
+        { id: "55-numerical-methods", num: "55", title: "數值方法", en: "Numerical Methods", done: true },
+        { id: "56-formal-logic", num: "56", title: "形式邏輯", en: "Formal Logic", done: true },
+        { id: "57-probability", num: "57", title: "機率論", en: "Probability", done: true },
+      ],
+    },
+    {
+      part: "第十五部 · 終極專案",
+      icon: "🏆",
+      blurb: "把所有知識整合成一個真實世界的作品。",
+      chapters: [
+        { id: "58-final-project", num: "58", title: "規劃與完成畢業專案", en: "The Final Project", done: true },
+      ],
+    },
+    {
+      part: "第十六部 · 競賽程式設計與 APCS",
+      icon: "🥇",
+      blurb: "專修軌道:用 C++/STL 與經典題型,打進 APCS、TOI 與程式競賽。",
+      chapters: [
+        { id: "59-cpp-stl", num: "59", title: "C++ 與 STL:競賽程式入門", en: "C++ & STL for Competitive", done: true },
+        { id: "60-competitive-techniques", num: "60", title: "競賽必備技巧:前綴和、差分、二分搜答案", en: "Prefix Sums, Diff & Binary Search", done: true },
+        { id: "61-competitive-ds", num: "61", title: "競賽資料結構:單調隊列、BIT、線段樹", en: "Competitive Data Structures", done: true },
+        { id: "62-competitive-paradigms", num: "62", title: "競賽範式:暴搜、分治、貪心、DP 實戰", en: "Competitive Paradigms", done: true },
+        { id: "63-graph-tree-advanced", num: "63", title: "圖論與樹上演算法", en: "Graph & Tree Algorithms", done: true },
+        { id: "64-apcs-toi", num: "64", title: "APCS 與 TOI 實戰題庫", en: "APCS & TOI Problem Sets", done: true },
+      ],
+    },
+    {
+      part: "第十七部 · 電腦視覺與影像辨識",
+      icon: "👁️",
+      blurb: "專修軌道:從像素到 CNN、YOLO 與 AR——成果驅動的電腦視覺。",
+      chapters: [
+        { id: "65-cv-basics-processing", num: "65", title: "影像即資料與影像處理", en: "Image as Data & Processing", done: true },
+        { id: "66-cv-features-classic", num: "66", title: "特徵與傳統視覺", en: "Features & Classic Vision", done: true },
+        { id: "67-cv-deep-learning", num: "67", title: "深度學習視覺:CNN、YOLO、分割", en: "Deep Learning Vision", done: true },
+        { id: "68-cv-graphics-ar", num: "68", title: "電腦圖學、3D 與擴增實境", en: "Graphics, 3D & AR", done: true },
+      ],
+    },
+    {
+      part: "第十八部 · 實戰資安 CTF",
+      icon: "🚩",
+      blurb: "專修軌道:從終端機尋寶到 Pwn 與自辦 CTF——動手做的攻防實戰。",
+      chapters: [
+        { id: "69-ctf-foundations", num: "69", title: "駭客工作台、終端機尋寶與編碼", en: "CTF Foundations & Encoding", done: true },
+        { id: "70-ctf-crypto", num: "70", title: "古典與現代密碼破譯", en: "Classic & Modern Crypto Cracking", done: true },
+        { id: "71-ctf-web-network-forensics", num: "71", title: "Web 攻防、封包分析與檔案鑑識", en: "Web, Packets & Forensics", done: true },
+        { id: "72-ctf-pwn-reverse", num: "72", title: "逆向工程與二進位攻防", en: "Reverse Engineering & Pwn", done: true },
+        { id: "73-ctf-compete", num: "73", title: "自動化、參賽與自辦 CTF", en: "Automation & Running a CTF", done: true },
+      ],
+    },
+    {
+      part: "附錄 · 完整題庫",
+      icon: "📚",
+      blurb: "依章節收錄 AP325、APCS、TOI 全部題目與解答,當你的刷題地圖。",
+      chapters: [
+        { id: "74-bank-ap325", num: "附A", title: "AP325 完整題單(依章)", en: "AP325 Problem List", done: true },
+        { id: "75-bank-apcs-concept", num: "附B", title: "APCS 觀念題題庫(125 題)", en: "APCS Concept Questions", done: true },
+        { id: "76-bank-apcs-impl-1", num: "附C", title: "APCS 實作題題庫(上)第 1–6 章", en: "APCS Implementation I", done: true },
+        { id: "77-bank-apcs-impl-2", num: "附D", title: "APCS 實作題題庫(下)第 7–11 章", en: "APCS Implementation II", done: true },
+        { id: "78-bank-apcs-mock", num: "附E", title: "APCS 模擬考卷(3 卷)", en: "APCS Mock Exams", done: true },
+        { id: "79-bank-toi", num: "附F", title: "TOI 題庫(337 題,全文)", en: "TOI Problem Bank", done: true },
+      ],
+    },
+  ],
+};
+
+// 攤平成線性章節序列(供上一章/下一章使用)
+BOOK.flat = BOOK.parts.flatMap(p => p.chapters.map(c => ({ ...c, partTitle: p.part })));
+
+/* ---------- 工具 ---------- */
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v;
+    else if (k === "html") e.innerHTML = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid != null) e.append(kid.nodeType ? kid : document.createTextNode(kid));
+  return e;
+}
+function currentId() {
+  const m = location.pathname.match(/([^/\\]+)\.html$/);
+  return m ? m[1] : "index";
+}
+const REL = () => (currentId() === "index" || location.pathname.endsWith("/")) ? "" : "";
+
+/* ---------- 主題 ---------- */
+function initTheme() {
+  const saved = localStorage.getItem("cs-theme");
+  const sys = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  document.documentElement.dataset.theme = saved || sys;
+}
+function toggleTheme() {
+  const cur = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  document.documentElement.dataset.theme = cur;
+  localStorage.setItem("cs-theme", cur);
+  const b = document.getElementById("theme-icon"); if (b) b.textContent = cur === "dark" ? "☀️" : "🌙";
+}
+
+/* ---------- 頂部列 ---------- */
+function buildTopbar(prefix) {
+  const dark = document.documentElement.dataset.theme === "dark";
+  const bar = el("div", { class: "topbar" },
+    el("button", { class: "icon-btn menu-toggle", "aria-label": "選單", onclick: toggleSidebar }, "☰"),
+    el("a", { class: "brand", href: prefix + "index.html" },
+      el("span", { class: "logo" }, "CS"),
+      el("span", {}, "CS 自學聖經")),
+    el("span", { class: "spacer" }),
+    el("button", { class: "icon-btn", "aria-label": "切換主題", onclick: toggleTheme, title: "切換深淺色" },
+      el("span", { id: "theme-icon" }, dark ? "☀️" : "🌙")),
+  );
+  document.body.prepend(bar);
+  document.body.prepend(el("div", { id: "progress-bar" }));
+}
+
+/* ---------- 左側導覽 ---------- */
+function buildSidebar(prefix) {
+  const cur = currentId();
+  const nav = el("nav", { class: "sidebar", id: "sidebar" });
+  for (const part of BOOK.parts) {
+    nav.append(el("div", { class: "part-title" }, part.part));
+    for (const c of part.chapters) {
+      const href = c.done ? prefix + "chapters/" + c.id + ".html" : "javascript:void(0)";
+      const a = el("a", {
+        class: "nav-link" + (c.id === cur ? " active" : "") + (c.done ? "" : " todo"),
+        href,
+        title: c.en,
+      }, el("span", { class: "ch-num" }, c.num), c.title);
+      if (!c.done) { a.style.opacity = ".5"; a.title = "撰寫中 / Coming soon"; }
+      nav.append(a);
+    }
+  }
+  document.querySelector(".layout").prepend(nav);
+  document.querySelector(".layout").prepend(el("div", { class: "sidebar-backdrop", id: "backdrop", onclick: toggleSidebar }));
+}
+function toggleSidebar() {
+  document.getElementById("sidebar")?.classList.toggle("open");
+  document.getElementById("backdrop")?.classList.toggle("show");
+}
+
+/* ---------- 右側頁內目錄 ---------- */
+function buildTOC() {
+  const content = document.querySelector(".content");
+  if (!content) return;
+  const heads = content.querySelectorAll("h2, h3");
+  if (heads.length < 2) return;
+  const toc = el("aside", { class: "toc" }, el("div", { class: "toc-title" }, "本章導覽"));
+  heads.forEach((h, i) => {
+    if (!h.id) h.id = "sec-" + i;
+    toc.append(el("a", { href: "#" + h.id, class: h.tagName === "H3" ? "h3" : "" }, h.textContent));
+  });
+  document.querySelector(".layout").append(toc);
+
+  const links = [...toc.querySelectorAll("a")];
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        links.forEach(l => l.classList.toggle("active", l.getAttribute("href") === "#" + en.target.id));
+      }
+    });
+  }, { rootMargin: "-80px 0px -70% 0px" });
+  heads.forEach(h => obs.observe(h));
+}
+
+/* ---------- 上一章 / 下一章 ---------- */
+function buildPager(prefix) {
+  const cur = currentId();
+  const idx = BOOK.flat.findIndex(c => c.id === cur);
+  if (idx < 0) return;
+  const content = document.querySelector(".content");
+  const pager = el("div", { class: "pager" });
+  const prev = BOOK.flat.slice(0, idx).reverse().find(c => c.done);
+  const next = BOOK.flat.slice(idx + 1).find(c => c.done);
+  if (prev) pager.append(el("a", { href: prefix + "chapters/" + prev.id + ".html", class: "prev" },
+    el("div", { class: "dir" }, "← 上一章"), el("div", { class: "ttl" }, prev.title)));
+  else pager.append(el("a", { href: prefix + "index.html", class: "prev" },
+    el("div", { class: "dir" }, "← 回到"), el("div", { class: "ttl" }, "首頁目錄")));
+  if (next) pager.append(el("a", { href: prefix + "chapters/" + next.id + ".html", class: "next" },
+    el("div", { class: "dir" }, "下一章 →"), el("div", { class: "ttl" }, next.title)));
+  content.append(pager);
+}
+
+/* ---------- 進度條 ---------- */
+function initProgress() {
+  const bar = document.getElementById("progress-bar");
+  if (!bar) return;
+  const update = () => {
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  };
+  document.addEventListener("scroll", update, { passive: true });
+  update();
+}
+
+/* ---------- 程式碼複製 ---------- */
+function initCopyButtons() {
+  document.querySelectorAll(".content pre").forEach(pre => {
+    const btn = el("button", { class: "copy-btn" }, "複製");
+    btn.addEventListener("click", () => {
+      const code = pre.querySelector("code") || pre;
+      navigator.clipboard.writeText(code.innerText).then(() => {
+        btn.textContent = "已複製 ✓";
+        setTimeout(() => (btn.textContent = "複製"), 1600);
+      });
+    });
+    pre.append(btn);
+  });
+}
+
+/* ---------- highlight.js(語法上色) ---------- */
+function loadHighlight() {
+  if (!document.querySelector(".content pre code")) return;
+  const dark = document.documentElement.dataset.theme === "dark";
+  const css = el("link", { rel: "stylesheet",
+    href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/" +
+      (dark ? "atom-one-dark" : "atom-one-light") + ".min.css", id: "hljs-theme" });
+  document.head.append(css);
+  const s = el("script", { src: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" });
+  s.onload = () => { window.hljs && window.hljs.highlightAll(); };
+  document.head.append(s);
+}
+
+/* ---------- MathJax(數學公式) ---------- */
+function loadMathJax() {
+  const body = document.body.innerText;
+  if (!/\$.+\$|\\\(|\\\[/.test(body)) return;
+  window.MathJax = {
+    tex: { inlineMath: [["$", "$"], ["\\(", "\\)"]], displayMath: [["$$", "$$"], ["\\[", "\\]"]] },
+    options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"] },
+  };
+  document.head.append(el("script", {
+    src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js", async: "" }));
+}
+
+/* ---------- 啟動 ---------- */
+function boot() {
+  initTheme();
+  const onChapter = !!document.querySelector(".layout .content");
+  const prefix = location.pathname.includes("/chapters/") ? "../" : "";
+  buildTopbar(prefix);
+  if (onChapter) {
+    buildSidebar(prefix);
+    buildTOC();
+    buildPager(prefix);
+  }
+  initProgress();
+  initCopyButtons();
+  loadHighlight();
+  loadMathJax();
+}
+document.addEventListener("DOMContentLoaded", boot);
