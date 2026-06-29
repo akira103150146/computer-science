@@ -4,8 +4,9 @@
    風格:Medium 風閱讀體驗 · 紙感淺色 / 深邃深色雙主題
    ========================================================================== */
 
-/* ---------- 字型 ---------- */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;600;700;900&family=Noto+Sans+TC:wght@400;500;700;900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+/* ---------- 字型 ----------
+   字型改由各 HTML <head> 的 <link rel="preconnect"> + <link rel="stylesheet"> 載入
+   (display=swap、精簡字重),比 CSS @import 更快、不阻擋渲染。 */
 
 /* ---------- 設計變數 ---------- */
 :root {
@@ -528,3 +529,25 @@ footer.site-footer a { color: var(--accent); text-decoration: none; }
 .toi-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
 .toi-links a:hover { text-decoration: underline; }
 .toi-empty { text-align: center; color: var(--text-faint); padding: 40px; font-family: var(--font-sans); }
+
+/* ============== 效能優化 / Performance ==============
+   content-visibility:auto 讓離開視窗的長卡片跳過排版與繪製,大幅加快
+   長頁面(TOI 368 張卡、題庫上百題)的捲動與重繪。contain-intrinsic-size
+   提供預估高度,避免捲軸跳動。 */
+.toi-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 280px;
+}
+.exercise {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 220px;
+}
+/* 列印或在無支援的瀏覽器時,確保全部內容渲染 */
+@media print {
+  .toi-card, .exercise { content-visibility: visible; }
+}
+/* 尊重使用者「減少動態」偏好,關閉平滑捲動與轉場以提升流暢度 */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

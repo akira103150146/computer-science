@@ -90,7 +90,10 @@
       list.innerHTML = shown.length
         ? shown.map(cardHTML).join("")
         : '<div class="toi-empty">沒有符合條件的題目。</div>';
-      if (window.hljs) list.querySelectorAll("pre code").forEach(function (b) { window.hljs.highlightElement(b); });
+      // 交給 book.js 的延遲系統處理新卡片:複製鈕、進視窗才排版數學、展開才上色程式碼
+      if (window.csAddCopy) window.csAddCopy(list);
+      if (window.csObserveMath) window.csObserveMath(list.querySelectorAll(".toi-card"));
+      if (window.csObserveHL) window.csObserveHL(list);
     }
 
     bar.querySelectorAll(".toi-chip").forEach(function (c) {
@@ -100,7 +103,13 @@
       });
     });
     document.getElementById("toi-year").addEventListener("change", function (e) { state.year = e.target.value; render(); });
-    document.getElementById("toi-search").addEventListener("input", function (e) { state.q = e.target.value; render(); });
+    // 搜尋去抖動(debounce):打字停頓 200ms 才重繪,避免每個字元都重建上百張卡片
+    var searchTimer;
+    document.getElementById("toi-search").addEventListener("input", function (e) {
+      state.q = e.target.value;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(render, 200);
+    });
 
     render();
   });

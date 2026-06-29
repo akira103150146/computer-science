@@ -263,7 +263,14 @@ function toggleTheme() {
   document.documentElement.dataset.theme = cur;
   localStorage.setItem("cs-theme", cur);
   const b = document.getElementById("theme-icon"); if (b) b.textContent = cur === "dark" ? "☀️" : "🌙";
+  // 同步切換 highlight.js 的配色主題
+  const hl = document.getElementById("hljs-theme");
+  if (hl) hl.href = HLJS_BASE + "styles/" + (cur === "dark" ? "atom-one-dark" : "atom-one-light") + ".min.css";
 }
+
+/* CDN 基底(集中管理,順便給 <link rel=preconnect> 用) */
+const HLJS_BASE = "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/";
+const MJ_URL = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js";
 
 /* ---------- 頂部列 ---------- */
 function buildTopbar(prefix) {
@@ -348,57 +355,101 @@ function buildPager(prefix) {
   content.append(pager);
 }
 
-/* ---------- 進度條 ---------- */
+/* ---------- 進度條(rAF 節流 + 快取高度,避免每次捲動觸發版面重算) ---------- */
 function initProgress() {
   const bar = document.getElementById("progress-bar");
   if (!bar) return;
-  const update = () => {
-    const h = document.documentElement;
-    const max = h.scrollHeight - h.clientHeight;
-    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+  const h = document.documentElement;
+  let max = 1, ticking = false;
+  const recalc = () => { max = h.scrollHeight - h.clientHeight; };
+  const paint = () => {
+    bar.style.width = (max > 0 ? Math.min(h.scrollTop / max, 1) * 100 : 0) + "%";
+    ticking = false;
   };
-  document.addEventListener("scroll", update, { passive: true });
-  update();
+  const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(paint); } };
+  recalc();
+  document.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", () => { recalc(); paint(); }, { passive: true });
+  // 內容高度變動(TOI 卡片重繪、details 展開)時重新量測,但不在捲動熱路徑上
+  if (window.ResizeObserver) new ResizeObserver(() => { recalc(); }).observe(document.body);
+  paint();
 }
 
-/* ---------- 程式碼複製 ---------- */
+/* ---------- 程式碼複製(委派事件,可重複套用到動態新增的 pre) ---------- */
+function addCopyButtons(scope) {
+  (scope || document).querySelectorAll("pre").forEach(pre => {
+    if (pre.closest(".content, .toi-card") && !pre.querySelector(".copy-btn"))
+      pre.append(el("button", { class: "copy-btn" }, "複製"));
+  });
+}
 function initCopyButtons() {
-  document.querySelectorAll(".content pre").forEach(pre => {
-    const btn = el("button", { class: "copy-btn" }, "複製");
-    btn.addEventListener("click", () => {
-      const code = pre.querySelector("code") || pre;
-      navigator.clipboard.writeText(code.innerText).then(() => {
-        btn.textContent = "已複製 ✓";
-        setTimeout(() => (btn.textContent = "複製"), 1600);
-      });
+  addCopyButtons(document);
+  window.csAddCopy = addCopyButtons;
+  document.addEventListener("click", (e) => {
+    const btn = e.target.closest && e.target.closest(".copy-btn");
+    if (!btn) return;
+    const pre = btn.closest("pre"); if (!pre) return;
+    const code = pre.querySelector("code") || pre;
+    navigator.clipboard.writeText(code.innerText).then(() => {
+      btn.textContent = "已複製 ✓";
+      setTimeout(() => (btn.textContent = "複製"), 1600);
     });
-    pre.append(btn);
   });
 }
 
-/* ---------- highlight.js(語法上色) ---------- */
+/* ---------- highlight.js:延遲上色(只在進入視窗 / 展開 details 時處理) ----------
+   長頁面(題庫上百段、TOI 300+ 段 C++)不再於載入時一次上色全部,大幅縮短首次互動時間。 */
 function loadHighlight() {
-  if (!document.querySelector(".content pre code")) return;
+  if (!document.querySelector(".content pre code, .toi-card pre code")) return;
   const dark = document.documentElement.dataset.theme === "dark";
-  const css = el("link", { rel: "stylesheet",
-    href: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/" +
-      (dark ? "atom-one-dark" : "atom-one-light") + ".min.css", id: "hljs-theme" });
-  document.head.append(css);
-  const s = el("script", { src: "https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" });
-  s.onload = () => { window.hljs && window.hljs.highlightAll(); };
+  document.head.append(el("link", { rel: "stylesheet", id: "hljs-theme",
+    href: HLJS_BASE + "styles/" + (dark ? "atom-one-dark" : "atom-one-light") + ".min.css" }));
+  const s = el("script", { src: HLJS_BASE + "highlight.min.js" });
+  s.onload = () => {
+    const hl = (code) => {
+      if (!code || code.dataset.hl || !window.hljs) return;
+      code.dataset.hl = "1";
+      window.hljs.highlightElement(code);
+    };
+    const io = new IntersectionObserver((ents) => {
+      ents.forEach(e => { if (e.isIntersecting) { hl(e.target); io.unobserve(e.target); } });
+    }, { rootMargin: "300px" });
+    const observeAll = (scope) => (scope || document).querySelectorAll("pre code").forEach(c => io.observe(c));
+    observeAll(document);
+    window.csObserveHL = observeAll;
+    // 摺疊在 details 內的程式碼:展開時才上色(收合時不可見,不會被 IO 觸發)
+    document.addEventListener("toggle", (e) => {
+      if (e.target.tagName === "DETAILS" && e.target.open)
+        e.target.querySelectorAll("pre code").forEach(hl);
+    }, true);
+  };
   document.head.append(s);
 }
 
-/* ---------- MathJax(數學公式) ---------- */
+/* ---------- MathJax:一般頁面整頁排版;TOI 題庫頁因公式量大改為延遲(逐卡進視窗才排版) ---------- */
 function loadMathJax() {
-  const body = document.body.innerText;
-  if (!/\$.+\$|\\\(|\\\[/.test(body)) return;
+  const txt = document.body.textContent;
+  if (txt.indexOf("$") < 0 && txt.indexOf("\\(") < 0 && txt.indexOf("\\[") < 0) return;
+  const lazy = !!document.getElementById("toi-app");
   window.MathJax = {
     tex: { inlineMath: [["$", "$"], ["\\(", "\\)"]], displayMath: [["$$", "$$"], ["\\[", "\\]"]] },
-    options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"] },
+    options: { skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"], enableMenu: false },
+    startup: { typeset: !lazy },
   };
-  document.head.append(el("script", {
-    src: "https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js", async: "" }));
+  const s = el("script", { src: MJ_URL, async: "" });
+  if (lazy) s.onload = () => {
+    window.MathJax.startup.promise.then(() => {
+      const done = new WeakSet();
+      const ts = (node) => { if (node && !done.has(node)) { done.add(node); window.MathJax.typesetPromise([node]).catch(() => {}); } };
+      const io = new IntersectionObserver((ents) => {
+        ents.forEach(e => { if (e.isIntersecting) { ts(e.target); io.unobserve(e.target); } });
+      }, { rootMargin: "400px" });
+      const observe = (nodes) => nodes.forEach(n => io.observe(n));
+      window.csObserveMath = observe;
+      observe(document.querySelectorAll(".content > *:not(#toi-app), #toi-app .toi-card"));
+    });
+  };
+  document.head.append(s);
 }
 
 /* ---------- 啟動 ---------- */
